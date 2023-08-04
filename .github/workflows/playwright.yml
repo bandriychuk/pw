@@ -45,6 +45,6 @@ jobs:
               with:
                 external_repository: bandriychuk/pw
                 publish_branch: main
-#                personal_token: ${{ secrets.PERSONAL_TOKEN }}
+                personal_token: ${{ secrets.PERSONAL_TOKEN }}
                 publish_dir: ${{steps.download.outputs.download-path}}
                 keep_files: true
