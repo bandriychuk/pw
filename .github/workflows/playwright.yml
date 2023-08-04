@@ -8,6 +8,13 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    permissions:
+        contents: read
+        pages: write
+        id-token: write
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-node@v3
