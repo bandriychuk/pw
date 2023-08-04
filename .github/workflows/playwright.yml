@@ -43,7 +43,7 @@ jobs:
               if: always()
               uses: peaceiris/actions-gh-pages@v3.7.3
               with:
-                external_repository: https://github.com/bandriychuk/pw
+                external_repository: bandriychuk/pw
                 publish_branch: main
                 personal_token: ${{ secrets.PERSONAL_TOKEN }}
                 publish_dir: ${{steps.download.outputs.download-path}}
