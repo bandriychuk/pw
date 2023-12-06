@@ -1,78 +1,81 @@
-import { defineConfig, devices } from '@playwright/test';
+/* eslint n/no-process-env: 0 */ // --> OFF
+import dotenv from 'dotenv';
+import * as path from 'path';
+import { PlaywrightTestConfig, defineConfig, devices } from '@playwright/test';
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
-
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
-export default defineConfig({
-  testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
-  use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://127.0.0.1:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on',
-    video: 'on'
+const e2eProjects = [
+  {
+    use: { ...devices['Desktop Chrome'] },
+    testDir: './playwright/tests/e2e/',
+    name: 'chromium',
   },
+];
 
-  /* Configure projects for major browsers */
-  projects: [
+const intProjects = [
+  {
+    testDir: './playwright/tests/integration',
+    use: { ...devices['Desktop Chrome'] },
+    name: 'chromium',
+  },
+];
+
+const localReporters: PlaywrightTestConfig['reporter'] = [
+  ['html', { outputFolder: 'playwright/test-results' }],
+  ['list'],
+];
+
+const ciReporters: PlaywrightTestConfig['reporter'] = [
+  ['list'],
+  ['junit', { outputFile: 'playwright/build/test-results/reporter/results.xml' }],
+  ['html', { outputFolder: 'playwright/test-results' }],
+  [
+    'allure-playwright',
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      environmentInfo: {
+        E2E_NODE_VERSION: process.version,
+        E2E_OS: process.platform,
+      },
+      outputFolder: './playwright/allure-results',
+      suiteTitle: true,
+      detail: true,
     },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
+];
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://127.0.0.1:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+dotenv.config({
+  path: path.resolve(__dirname, process.env.E2E ? '.env.e2e' : '.env.int'),
 });
+
+const playwrightConfiguration = (configuration: PlaywrightTestConfig = {}): PlaywrightTestConfig => ({
+  use: {
+    testIdAttribute: 'data-automation',
+    screenshot: 'only-on-failure',
+    timezoneId: 'Europe/London',
+    video: 'on',
+    ignoreHTTPSErrors: true,
+    actionTimeout: 45000,
+    headless: true,
+    trace: 'retain-on-failure',
+  },
+  webServer: !process.env.E2E
+    ? {
+        reuseExistingServer: false,
+        command: 'pnpm dev',
+        timeout: 120 * 1000,
+        port: 3000,
+      }
+    : undefined,
+  retries: process.env.CI ? parseInt(process.env.PLAYWRIGHT_RETRIES || '2') : 0,
+  reporter: process.env.CI ? ciReporters : localReporters,
+  projects: process.env.E2E ? e2eProjects : intProjects,
+  workers: process.env.CI ? 4 : 4,
+  expect: {
+    timeout: 20_000,
+  },
+  globalTimeout: 60 * 10 * 1000,
+  fullyParallel: true,
+  timeout: 120 * 1000,
+  ...configuration,
+});
+
+export default defineConfig(playwrightConfiguration());
